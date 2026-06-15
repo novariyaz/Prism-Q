@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISM Q | Multi-Agent Content Intelligence Platform</title>
+  <meta name="description" content="Audit text quality using a multi-agent orchestration architecture. Specific agents inspect readability, specificity, arguments, and content slop before synthesis.">
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- OGL WebGL Library for the interactive shader Orb -->
+  <script src="https://unpkg.com/ogl@0.0.32/dist/ogl.umd.js"></script>
+</head>
+<body>
+  <!-- Splash Screen -->
+  <div id="splash-screen" class="splash-screen">
+    <div class="splash-logo">
+      <svg class="splash-prism-svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="splash-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3b82f6" />
+            <stop offset="50%" stop-color="#8a4bf3" />
+            <stop offset="100%" stop-color="#ec4899" />
+          </linearGradient>
+        </defs>
+        <polygon points="50,15 20,50 50,58" fill="none" stroke="url(#splash-grad)" stroke-width="2" />
+        <polygon points="50,15 80,50 50,58" fill="none" stroke="url(#splash-grad)" stroke-width="2" />
+        <polygon points="50,85 20,50 50,58" fill="none" stroke="url(#splash-grad)" stroke-width="2" />
+        <polygon points="50,85 80,50 50,58" fill="none" stroke="url(#splash-grad)" stroke-width="2" />
+        <line x1="50" y1="15" x2="50" y2="85" stroke="url(#splash-grad)" stroke-width="2.5" />
+        <line x1="20" y1="50" x2="80" y2="50" stroke="url(#splash-grad)" stroke-width="1.5" stroke-dasharray="3,3" />
+      </svg>
+      <h1 class="splash-title">PRISM <span>Q</span></h1>
+    </div>
+    <div class="splash-loader">
+      <div class="splash-progress"></div>
+    </div>
+  </div>
+
+  <!-- Background Obsidian Atmosphere -->
+  <div class="glow-bg">
+    <div class="glow-sphere glow-purple"></div>
+    <div class="glow-sphere glow-blue"></div>
+  </div>
+
+  <!-- Landing / Get Started Page -->
+  <div id="landing-page" class="page-view">
+    <header class="landing-header glass-pill">
+      <div class="landing-logo">
+        <svg class="nav-prism-svg" viewBox="0 0 40 40" style="width: 24px; height: 24px;">
+          <polygon points="20,5 8,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+          <polygon points="20,5 32,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+          <polygon points="20,35 8,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+          <polygon points="20,35 32,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+          <line x1="20" y1="5" x2="20" y2="35" stroke="white" stroke-width="1.8" />
+        </svg>
+        <span>PRISM Q</span>
+      </div>
+      <nav class="landing-nav">
+        <a href="#" class="land-nav-link" id="btn-nav-about">About</a>
+      </nav>
+    </header>
+
+    <div class="orb-viewport">
+      <div id="orb-canvas-container" class="orb-canvas-container"></div>
+      <div class="orb-text-overlay">
+        <h1 class="orb-title">Powered by orchestrated AI agents working in parallel.</h1>
+        <div class="orb-buttons">
+          <button id="btn-get-started" class="btn btn-get-started-landing">Enter Prism Q</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard View (Original main app-container) -->
+  <div id="dashboard-page" class="app-container page-view hidden">
+    <!-- Top Settings Drawer -->
+    <div id="settings-drawer" class="settings-drawer glass hidden">
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <h3><i data-lucide="settings" class="icon-accent"></i> Configuration Settings</h3>
+          <button id="btn-settings-close" class="btn-icon"><i data-lucide="x"></i></button>
+        </div>
+        <div class="drawer-row">
+          <div class="input-group-inline glass">
+            <i data-lucide="key" class="icon-muted"></i>
+            <input type="password" id="api-key" placeholder="Enter Gemini API Key" />
+            <button id="toggle-api-key" class="btn-icon" title="Toggle visibility">
+              <i data-lucide="eye" id="eye-icon"></i>
+            </button>
+          </div>
+
+          <div class="select-wrapper glass">
+            <i data-lucide="cpu" class="icon-muted"></i>
+            <select id="model-select">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            </select>
+          </div>
+
+          <button id="btn-save-key" class="btn btn-primary">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Header Navigation Bar -->
+    <header class="app-header glass">
+      <div class="header-left">
+        <div class="header-logo">
+          <div class="logo-icon">
+            <svg class="nav-prism-svg" viewBox="0 0 40 40" style="width:20px; height:20px;">
+              <polygon points="20,5 8,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+              <polygon points="20,5 32,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+              <polygon points="20,35 8,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+              <polygon points="20,35 32,20 20,23" fill="none" stroke="white" stroke-width="1.5" />
+              <line x1="20" y1="5" x2="20" y2="35" stroke="white" stroke-width="1.8" />
+            </svg>
+          </div>
+          <div class="logo-text">
+            <h1>PRISM <span>Q</span></h1>
+          </div>
+        </div>
+        
+        <!-- Navigation links matching the PRISM Q mockup -->
+        <nav class="header-nav">
+          <a href="#" class="nav-link active" id="nav-dashboard">Dashboard</a>
+          <a href="#" class="nav-link" id="nav-history">History</a>
+        </nav>
+      </div>
+      
+      <div class="header-right">
+        <button class="btn-icon" id="btn-settings-toggle" title="Toggle Configuration Drawer">
+          <i data-lucide="settings"></i>
+        </button>
+        
+
+      </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <main class="workspace">
+      <!-- Left Column: Draft input & Permanent Agents Console -->
+      <section class="left-panel">
+        <!-- DRAFT CONTENT Card -->
+        <div class="card glass input-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <i data-lucide="file-text" class="icon-accent"></i>
+              <h2>DRAFT CONTENT</h2>
+            </div>
+            
+            <!-- Compact character counters inside header -->
+            <div class="input-stats-compact">
+              <span id="char-count">0 chars</span>
+              <span class="dot-divider">•</span>
+              <span id="word-count">0 words</span>
+              <span class="dot-divider" id="read-time-divider">•</span>
+              <span id="read-time">0 min read</span>
+            </div>
+          </div>
+          
+          <div class="card-body editor-body">
+            <div class="editor-container">
+              <div class="editor-gutter" id="editor-gutter">
+                <div>1</div>
+              </div>
+              <textarea id="content-input" placeholder="Paste your content here..." rows="10"></textarea>
+            </div>
+            <div class="editor-min-chars-note">Min. 50 characters</div>
+          </div>
+
+          <div class="card-footer">
+            <div class="draft-action-buttons">
+              <button id="btn-audit" class="btn btn-primary btn-glow">
+                <i data-lucide="sparkles"></i>
+                <span>Audit Content</span>
+              </button>
+              <div class="draft-action-sub-buttons" style="display: flex; gap: 10px; width: 100%;">
+                <button id="btn-improve" class="btn btn-secondary" disabled style="flex: 1;">
+                  <i data-lucide="wand-2"></i>
+                  <span>Improve</span>
+                </button>
+                <button id="btn-demo" class="btn btn-secondary" style="flex: 1;">
+                  <i data-lucide="flask"></i>
+                  <span>Try Sample</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANALYSIS AGENTS Status Card (Always visible, matching sidebar) -->
+        <div class="card glass agents-sidebar-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <i data-lucide="cpu" class="icon-accent"></i>
+              <h2>ANALYSIS AGENTS</h2>
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <div class="sidebar-agents-list" id="sidebar-agents-list">
+              
+              <!-- Readability Agent -->
+              <div class="sidebar-agent-row" id="agent-card-readability">
+                <div class="agent-row-left">
+                  <div class="agent-row-icon icon-blue"><i data-lucide="book-open"></i></div>
+                  <div class="agent-row-text">
+                    <span class="agent-row-name">Readability Agent</span>
+                    <span class="agent-row-purpose">Clarity, flow, structure</span>
+                  </div>
+                </div>
+                <div class="agent-row-right">
+                  <span class="agent-row-telemetry" id="agent-time-readability">0.0s</span>
+                  <span class="agent-row-telemetry-tokens" id="agent-tokens-readability"></span>
+                  <div class="agent-row-status" id="agent-icon-readability">
+                    <div class="status-ring"></div>
+                  </div>
+                  <!-- Hidden original elements for app.js backwards-compatibility -->
+                  <span id="agent-status-readability" class="hidden">Idle</span>
+                </div>
+              </div>
+
+              <!-- Specificity Agent -->
+              <div class="sidebar-agent-row" id="agent-card-specificity">
+                <div class="agent-row-left">
+                  <div class="agent-row-icon icon-purple"><i data-lucide="compass"></i></div>
+                  <div class="agent-row-text">
+                    <span class="agent-row-name">Specificity Agent</span>
+                    <span class="agent-row-purpose">Evidence, details, depth</span>
+                  </div>
+                </div>
+                <div class="agent-row-right">
+                  <span class="agent-row-telemetry" id="agent-time-specificity">0.0s</span>
+                  <span class="agent-row-telemetry-tokens" id="agent-tokens-specificity"></span>
+                  <div class="agent-row-status" id="agent-icon-specificity">
+                    <div class="status-ring"></div>
+                  </div>
+                  <span id="agent-status-specificity" class="hidden">Idle</span>
+                </div>
+              </div>
+
+              <!-- Argument Quality Agent -->
+              <div class="sidebar-agent-row" id="agent-card-argument">
+                <div class="agent-row-left">
+                  <div class="agent-row-icon icon-cyan"><i data-lucide="git-branch"></i></div>
+                  <div class="agent-row-text">
+                    <span class="agent-row-name">Argument Quality Agent</span>
+                    <span class="agent-row-purpose">Logic, validity, strength</span>
+                  </div>
+                </div>
+                <div class="agent-row-right">
+                  <span class="agent-row-telemetry" id="agent-time-argument">0.0s</span>
+                  <span class="agent-row-telemetry-tokens" id="agent-tokens-argument"></span>
+                  <div class="agent-row-status" id="agent-icon-argument">
+                    <div class="status-ring"></div>
+                  </div>
+                  <span id="agent-status-argument" class="hidden">Idle</span>
+                </div>
+              </div>
+
+              <!-- Content Value Agent -->
+              <div class="sidebar-agent-row" id="agent-card-content_value">
+                <div class="agent-row-left">
+                  <div class="agent-row-icon icon-pink"><i data-lucide="target"></i></div>
+                  <div class="agent-row-text">
+                    <span class="agent-row-name">Content Value Agent</span>
+                    <span class="agent-row-purpose">Redundancy, uniqueness</span>
+                  </div>
+                </div>
+                <div class="agent-row-right">
+                  <span class="agent-row-telemetry" id="agent-time-content_value">0.0s</span>
+                  <span class="agent-row-telemetry-tokens" id="agent-tokens-content_value"></span>
+                  <div class="agent-row-status" id="agent-icon-content_value">
+                    <div class="status-ring"></div>
+                  </div>
+                  <span id="agent-status-content_value" class="hidden">Idle</span>
+                </div>
+              </div>
+
+              <!-- Report Generator Agent -->
+              <div class="sidebar-agent-row" id="agent-card-report_generator">
+                <div class="agent-row-left">
+                  <div class="agent-row-icon icon-white"><i data-lucide="award"></i></div>
+                  <div class="agent-row-text">
+                    <span class="agent-row-name">Report Generator</span>
+                    <span class="agent-row-purpose">Synthesis & recommendations</span>
+                  </div>
+                </div>
+                <div class="agent-row-right">
+                  <span class="agent-row-telemetry" id="agent-time-report_generator">0.0s</span>
+                  <span class="agent-row-telemetry-tokens" id="agent-tokens-report_generator"></span>
+                  <div class="agent-row-status" id="agent-icon-report_generator">
+                    <div class="status-ring"></div>
+                  </div>
+                  <span id="agent-status-report_generator" class="hidden">Idle</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Main Multi-Dimensional Dashboard Views -->
+      <section class="right-panel">
+        
+        <!-- Toggle-able view container -->
+        <div id="main-view" class="main-view-container">
+          
+          <!-- Orchestration Loading Banner (Displayed only during active audits) -->
+          <div id="dashboard-loading-banner" class="dashboard-banner glass hidden">
+            <div class="banner-content">
+              <div class="banner-left">
+                <div class="spinner-mini"></div>
+                <span id="console-status-text">Orchestrating agent analysis...</span>
+              </div>
+              <div class="banner-right">
+                <span class="banner-timer" id="console-timer">Elapsed: 0.0s</span>
+                <div class="banner-progress-bar-container">
+                  <div class="banner-progress-bar" id="console-progress-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MULTI-DIMENSIONAL VIEW Radar/Prism Card -->
+          <div class="card glass multi-dimensional-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <i data-lucide="network" class="icon-accent"></i>
+                <h2>MULTI-DIMENSIONAL VIEW</h2>
+              </div>
+              <div class="live-status-badge">
+                <span class="status-pulse-dot"></span>
+                <span>Live</span>
+              </div>
+            </div>
+            
+            <div class="card-body prism-card-body">
+              <!-- Dotted Radar Circular Ring Constellation & SVG Pyramid -->
+              <div class="radar-constellation-container">
+                <!-- Outer circular rings -->
+                <div class="radar-circle radar-outer"></div>
+                <div class="radar-circle radar-middle"></div>
+                <div class="radar-circle radar-inner"></div>
+                
+                <!-- Axis Lines -->
+                <div class="radar-axis axis-vertical"></div>
+                <div class="radar-axis axis-horizontal"></div>
+                
+                <!-- Constellation Nodes & Labels -->
+                <div class="constellation-node node-top" id="node-readability">
+                  <div class="node-dot dot-blue"></div>
+                  <div class="node-label">
+                    <i data-lucide="book-open" class="icon-blue"></i>
+                    <span>READABILITY<br><small id="radar-val-readability">Clarity & Flow</small></span>
+                  </div>
+                </div>
+
+                <div class="constellation-node node-left" id="node-specificity">
+                  <div class="node-dot dot-purple"></div>
+                  <div class="node-label label-left">
+                    <i data-lucide="compass" class="icon-purple"></i>
+                    <span>SPECIFICITY<br><small id="radar-val-specificity">Depth & Evidence</small></span>
+                  </div>
+                </div>
+
+                <div class="constellation-node node-right" id="node-argument">
+                  <div class="node-dot dot-cyan"></div>
+                  <div class="node-label label-right">
+                    <i data-lucide="git-branch" class="icon-cyan"></i>
+                    <span>ARGUMENT QUALITY<br><small id="radar-val-argument">Logic & Strength</small></span>
+                  </div>
+                </div>
+
+                <div class="constellation-node node-bottom" id="node-value">
+                  <div class="node-dot dot-pink"></div>
+                  <div class="node-label label-bottom">
+                    <i data-lucide="target" class="icon-pink"></i>
+                    <span>CONTENT VALUE<br><small id="radar-val-value">Uniqueness & Worth</small></span>
+                  </div>
+                </div>
+
+                <!-- 3D SVG Prism / Pyramid in the center (Octahedron double pyramid) -->
+                <div class="prism-container">
+                  <svg class="prism-svg" viewBox="0 0 200 200">
+                    <defs>
+                      <linearGradient id="prism-top-left" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.65"/>
+                        <stop offset="100%" stop-color="#8a4bf3" stop-opacity="0.1"/>
+                      </linearGradient>
+                      <linearGradient id="prism-top-right" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#8a4bf3" stop-opacity="0.65"/>
+                        <stop offset="100%" stop-color="#ec4899" stop-opacity="0.1"/>
+                      </linearGradient>
+                      <linearGradient id="prism-bottom-left" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.6"/>
+                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.1"/>
+                      </linearGradient>
+                      <linearGradient id="prism-bottom-right" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ec4899" stop-opacity="0.6"/>
+                        <stop offset="100%" stop-color="#f97316" stop-opacity="0.1"/>
+                      </linearGradient>
+                      
+                      <linearGradient id="prism-back-top" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#8a4bf3" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.05"/>
+                      </linearGradient>
+                      
+                      <filter id="prism-glow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur stdDeviation="8" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                    </defs>
+                    
+                    <!-- Back faces (drawn first for correct depth overlay) -->
+                    <polygon points="100,20 40,100 100,78" fill="url(#prism-back-top)" opacity="0.4" />
+                    <polygon points="100,20 160,100 100,78" fill="url(#prism-back-top)" opacity="0.4" />
+                    <polygon points="100,180 40,100 100,78" fill="url(#prism-back-top)" opacity="0.3" />
+                    <polygon points="100,180 160,100 100,78" fill="url(#prism-back-top)" opacity="0.3" />
+
+                    <!-- Front faces -->
+                    <polygon points="100,20 40,100 100,122" fill="url(#prism-top-left)" />
+                    <polygon points="100,20 160,100 100,122" fill="url(#prism-top-right)" />
+                    <polygon points="100,180 40,100 100,122" fill="url(#prism-bottom-left)" />
+                    <polygon points="100,180 160,100 100,122" fill="url(#prism-bottom-right)" />
+                    
+                    <!-- Wireframe & highlights -->
+                    <!-- Center vertical split axis -->
+                    <line x1="100" y1="20" x2="100" y2="180" stroke="#ffffff" stroke-width="1.8" filter="url(#prism-glow)" opacity="0.8" />
+                    
+                    <!-- Horizontal mid lines -->
+                    <line x1="40" y1="100" x2="100" y2="122" stroke="#60a5fa" stroke-width="1.2" opacity="0.7" />
+                    <line x1="160" y1="100" x2="100" y2="122" stroke="#f472b6" stroke-width="1.2" opacity="0.7" />
+                    <line x1="40" y1="100" x2="100" y2="78" stroke="#a5b4fc" stroke-width="1" opacity="0.4" stroke-dasharray="2,2" />
+                    <line x1="160" y1="100" x2="100" y2="78" stroke="#a5b4fc" stroke-width="1" opacity="0.4" stroke-dasharray="2,2" />
+
+                    <!-- Outer diamond boundary wireframe -->
+                    <line x1="100" y1="20" x2="40" y2="100" stroke="#818cf8" stroke-width="1.2" opacity="0.6" />
+                    <line x1="100" y1="20" x2="160" y2="100" stroke="#c084fc" stroke-width="1.2" opacity="0.6" />
+                    <line x1="100" y1="180" x2="40" y2="100" stroke="#34d399" stroke-width="1.2" opacity="0.6" />
+                    <line x1="100" y1="180" x2="160" y2="100" stroke="#fb923c" stroke-width="1.2" opacity="0.6" />
+                    
+                    <!-- Sparkles / Floating stars inside/around -->
+                    <circle cx="70" cy="55" r="1.5" fill="#ffffff" opacity="0.8" />
+                    <circle cx="125" cy="140" r="2" fill="#818cf8" opacity="0.7" />
+                    <circle cx="150" cy="70" r="1.2" fill="#ec4899" opacity="0.9" />
+                    <circle cx="55" cy="130" r="1" fill="#06b6d4" opacity="0.8" />
+                    <circle cx="95" cy="90" r="2.5" fill="#ffffff" opacity="0.9" filter="url(#prism-glow)" />
+                  </svg>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Row of 5 Metric Score Cards -->
+          <div class="metrics-grid">
+            <!-- Overall Score Card -->
+            <div class="metric-card card glass border-glow-overall circular-gauge-card">
+              <div class="metric-header">
+                <h3>Overall Score</h3>
+                <i data-lucide="award" class="icon-muted"></i>
+              </div>
+              <div class="metric-body circular-gauge-body">
+                <div class="gauge-container">
+                  <svg class="gauge-svg" viewBox="0 0 100 100">
+                    <circle class="gauge-bg" cx="50" cy="50" r="38" />
+                    <circle class="gauge-progress" id="ring-overall" cx="50" cy="50" r="38" stroke-dasharray="238.76" stroke-dashoffset="238.76" />
+                  </svg>
+                  <div class="gauge-value">
+                    <span class="metric-number" id="val-overall">--</span>
+                    <span class="metric-suffix">/100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Readability Card -->
+            <div class="metric-card card glass border-glow-readability">
+              <div class="metric-header">
+                <h3>Readability</h3>
+                <i data-lucide="book-open" class="icon-blue"></i>
+              </div>
+              <div class="metric-body">
+                <span class="metric-number" id="val-readability">--</span>
+                <span class="metric-suffix">/100</span>
+              </div>
+              <svg class="hidden"><circle id="ring-readability"></circle></svg>
+            </div>
+
+            <!-- Specificity Card -->
+            <div class="metric-card card glass border-glow-specificity">
+              <div class="metric-header">
+                <h3>Specificity</h3>
+                <i data-lucide="compass" class="icon-purple"></i>
+              </div>
+              <div class="metric-body">
+                <span class="metric-number" id="val-specificity">--</span>
+                <span class="metric-suffix">/100</span>
+              </div>
+              <svg class="hidden"><circle id="ring-specificity"></circle></svg>
+            </div>
+
+            <!-- Argument Quality Card -->
+            <div class="metric-card card glass border-glow-argument">
+              <div class="metric-header">
+                <h3>Argument Quality</h3>
+                <i data-lucide="git-branch" class="icon-cyan"></i>
+              </div>
+              <div class="metric-body">
+                <span class="metric-number" id="val-argument">--</span>
+                <span class="metric-suffix">/100</span>
+              </div>
+              <svg class="hidden"><circle id="ring-argument"></circle></svg>
+            </div>
+
+            <!-- Content Value Card -->
+            <div class="metric-card card glass border-glow-value">
+              <div class="metric-header">
+                <h3>Content Value</h3>
+                <i data-lucide="target" class="icon-pink"></i>
+              </div>
+              <div class="metric-body">
+                <span class="metric-number" id="val-value">--</span>
+                <span class="metric-suffix">/100</span>
+              </div>
+              <!-- Actionability score element inside Content Value card to hold app.js values -->
+              <span id="val-actionability" class="hidden"></span>
+              <svg class="hidden"><circle id="ring-value"></circle><circle id="ring-actionability"></circle><circle id="ring-confidence"></circle><span id="val-confidence"></span></svg>
+            </div>
+          </div>
+
+          <!-- RECENT REPORTS Card / Details Card (Double-border glass card) -->
+          <div class="card glass recent-reports-card" id="recent-reports-card">
+            
+            <!-- Empty state (Shown initially) -->
+            <div class="reports-empty-state" id="reports-empty-state">
+              <div class="empty-icon-box glass">
+                <i data-lucide="folder" class="icon-muted"></i>
+              </div>
+              <h3>No reports yet</h3>
+              <p>Run your first audit to see the magic ✨</p>
+              <button class="btn btn-secondary btn-sm" id="btn-view-all-placeholder">View All</button>
+            </div>
+
+            <!-- Dashboard Report Details View (Shown once audit completed) -->
+            <div class="report-details-container hidden" id="report-details-container">
+              <div class="card-header report-card-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 10px;">
+                <div class="tabs-nav report-tabs-nav">
+                  <button class="tab-btn active" data-tab="tab-summary">Summary</button>
+                  <button class="tab-btn" data-tab="tab-detections">Detections</button>
+                  <button class="tab-btn" data-tab="tab-strengths">Strengths</button>
+                  <button class="tab-btn" data-tab="tab-weaknesses">Weaknesses</button>
+                  <button class="tab-btn" data-tab="tab-suggestions">Suggestions</button>
+                  <button class="tab-btn hidden" id="tab-improved-btn" data-tab="tab-improved">Improved Version</button>
+                </div>
+                <div class="report-export-buttons" style="display: flex; gap: 8px;">
+                  <button id="btn-copy-report" class="btn btn-secondary btn-sm btn-icon-text">
+                    <i data-lucide="copy"></i>
+                    <span>Copy Report</span>
+                  </button>
+                  <button id="btn-download-json" class="btn btn-secondary btn-sm btn-icon-text">
+                    <i data-lucide="download"></i>
+                    <span>Download JSON</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="tabs-content report-tabs-content">
+                <!-- Summary Tab -->
+                <div id="tab-summary" class="tab-panel active">
+                  <div class="summary-text" id="report-summary">Analyzing summary...</div>
+                </div>
+
+                <!-- Detections Tab -->
+                <div id="tab-detections" class="tab-panel">
+                  <div class="detections-grid" id="detections-container">
+                    <!-- Dynamic detections list -->
+                  </div>
+                </div>
+                
+                <!-- Strengths Tab -->
+                <div id="tab-strengths" class="tab-panel">
+                  <ul class="bullet-list positive-list" id="report-strengths">
+                    <!-- Injected strengths -->
+                  </ul>
+                </div>
+                
+                <!-- Weaknesses Tab -->
+                <div id="tab-weaknesses" class="tab-panel">
+                  <ul class="bullet-list negative-list" id="report-weaknesses">
+                    <!-- Injected weaknesses -->
+                  </ul>
+                </div>
+                
+                <!-- Suggestions Tab -->
+                <div id="tab-suggestions" class="tab-panel">
+                  <ul class="bullet-list improvement-list" id="report-suggestions">
+                    <!-- Injected suggestions -->
+                  </ul>
+                </div>
+
+                <!-- Improved Content Tab -->
+                <div id="tab-improved" class="tab-panel">
+                  <div class="improved-actions">
+                    <p class="text-muted">Gemini rewrote this draft utilizing audit suggestions to remove slop, clarify arguments, and improve readability while preserving original meaning.</p>
+                    <button id="btn-copy-improved" class="btn btn-secondary btn-sm btn-icon-text">
+                      <i data-lucide="copy"></i>
+                      <span>Copy Improved Draft</span>
+                    </button>
+                  </div>
+                  <div class="improved-draft-container glass">
+                    <div id="improved-content-display" class="improved-content-display">
+                      <!-- Improved version text injected here -->
+                    </div>
+                  </div>
+                  <div class="changes-list-container">
+                    <h4>Key Adjustments Made</h4>
+                    <ul class="bullet-list improvement-list" id="improved-changes-list">
+                      <!-- Changes summary injected here -->
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Debugging Telemetry details section -->
+          <div class="card glass debug-card">
+            <details class="debug-details">
+              <summary class="debug-summary">
+                <div class="card-title-group">
+                  <i data-lucide="code-2" class="icon-muted"></i>
+                  <h2>Orchestrator Telemetry & Debug Visualizer</h2>
+                </div>
+                <span class="debug-toggle-icon"><i data-lucide="chevron-down"></i></span>
+              </summary>
+              <div class="debug-body">
+                <p class="text-muted debug-intro">This explorer displays the intermediate payload outputs exchanged between the analysis agents and final synthesizer for verification.</p>
+                
+                <div class="debug-grid">
+                  <div class="debug-box glass">
+                    <h4>1. Readability Agent Output</h4>
+                    <pre><code id="debug-readability">Waiting for audit run...</code></pre>
+                  </div>
+                  <div class="debug-box glass">
+                    <h4>2. Specificity Agent Output</h4>
+                    <pre><code id="debug-specificity">Waiting for audit run...</code></pre>
+                  </div>
+                  <div class="debug-box glass">
+                    <h4>3. Argument Quality Agent Output</h4>
+                    <pre><code id="debug-argument">Waiting for audit run...</code></pre>
+                  </div>
+                  <div class="debug-box glass">
+                    <h4>4. Content Value Agent Output</h4>
+                    <pre><code id="debug-content-value">Waiting for audit run...</code></pre>
+                  </div>
+                </div>
+
+                <div class="debug-full-box glass">
+                  <h4>5. Aggregated merger Payload (Fed to Synthesizer)</h4>
+                  <pre><code id="debug-aggregated">Waiting for audit run...</code></pre>
+                </div>
+
+                <div class="debug-full-box glass">
+                  <h4>6. Synthesizer Output (Report Generator)</h4>
+                  <pre><code id="debug-synthesizer">Waiting for audit run...</code></pre>
+                </div>
+              </div>
+            </details>
+          </div>
+
+        </div>
+
+        <!-- History View Panel (Shown only when History tab in top nav is active) -->
+        <div id="history-view" class="history-view-container hidden">
+          <div class="card glass history-list-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <i data-lucide="history" class="icon-accent"></i>
+                <h2>Historical Audits Manager</h2>
+              </div>
+              <button id="btn-clear-history-main" class="btn btn-secondary btn-sm text-red">Clear All History</button>
+            </div>
+            <div class="card-body">
+              <p class="text-muted list-intro">Select a past content audit to load it back into the active dashboard workspace, or delete unwanted records.</p>
+              <div id="history-list-main" class="history-grid-list">
+                <!-- Dynamically injected list of past reports -->
+                <div class="empty-state">
+                  <i data-lucide="folder-open" class="icon-lg icon-muted"></i>
+                  <p>No historical audits stored yet.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Custom Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
