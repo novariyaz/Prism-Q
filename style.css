@@ -2239,3 +2239,396 @@ body {
   gap: 24px;
 }
 
+/* ==========================================================================
+   PRISM Q - MEDIA ATTACHMENTS & MODAL SYSTEMS
+   ========================================================================== */
+
+/* Editor Bottom Toolbar */
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.015);
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 0 0 8px 8px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attachment-status-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.attachment-status-text {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.btn-icon-sm {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 28px;
+  height: 28px;
+}
+
+.btn-icon-sm:hover {
+  color: var(--color-accent);
+  background: rgba(255, 255, 255, 0.06);
+  transform: scale(1.05);
+}
+
+.btn-icon-sm svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Attachment Badge */
+.attachment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: slideInLeft 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.attachment-badge.type-image {
+  background: rgba(138, 75, 243, 0.1);
+  border: 1px solid rgba(138, 75, 243, 0.25);
+  color: #c084fc;
+}
+
+.attachment-badge.type-doc {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  color: #22d3ee;
+}
+
+.attachment-badge.type-url {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #34d399;
+}
+
+.btn-remove-attachment {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-remove-attachment:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-remove-attachment svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Modal Overlay & Transitions */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(3, 3, 7, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Modal Card Glassmorphism */
+.modal-card {
+  width: 90%;
+  max-width: 580px;
+  background: rgba(13, 13, 21, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.modal-overlay.hidden .modal-card {
+  transform: translate3d(0, 20px, 0);
+  opacity: 0;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.modal-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-subtext {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  margin-top: 0;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+/* Attachment Grid & Cards */
+.attachment-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.option-card {
+  padding: 24px 16px;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.012);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, border-color, background-color;
+}
+
+.option-card:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translate3d(0, -3px, 0);
+}
+
+.option-icon-wrapper {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px auto;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.option-card:hover .option-icon-wrapper {
+  transform: scale(1.08);
+}
+
+.purple-glow {
+  color: #c084fc;
+  box-shadow: inset 0 0 10px rgba(138, 75, 243, 0.15);
+}
+.option-card:hover .purple-glow {
+  box-shadow: 0 0 16px rgba(138, 75, 243, 0.35);
+  background: rgba(138, 75, 243, 0.12);
+  border-color: rgba(138, 75, 243, 0.4);
+}
+
+.cyan-glow {
+  color: #22d3ee;
+  box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.15);
+}
+.option-card:hover .cyan-glow {
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+.emerald-glow {
+  color: #34d399;
+  box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.15);
+}
+.option-card:hover .emerald-glow {
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.option-card h4 {
+  margin: 0 0 8px 0;
+  font-family: var(--font-header);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+}
+
+.option-card p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+/* URL Drawer Input Box */
+.url-input-container {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(3, 3, 7, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  margin-top: 14px;
+  animation: slideDownFade 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translate3d(0, -6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.url-hint {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  margin-top: 10px;
+  padding-left: 4px;
+}
+
+/* Extraction Loader panel inside modal */
+.extraction-loader-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 3, 7, 0.5);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  margin-top: 14px;
+  animation: slideDownFade 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.spinner-pulse {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(138, 75, 243, 0.1);
+  border-top-color: #8a4bf3;
+  animation: spinLoader 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spinLoader {
+  to { transform: rotate(360deg); }
+}
+
+.loader-message {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Mobile & Device Smoothness Responsiveness */
+@media (max-width: 640px) {
+  .attachment-options-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .modal-card {
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .option-card {
+    padding: 16px;
+    display: flex;
+    text-align: left;
+    align-items: center;
+    gap: 14px;
+  }
+  
+  .option-icon-wrapper {
+    margin: 0;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+  
+  .option-card h4 {
+    margin-bottom: 3px;
+  }
+  
+  .option-card p {
+    font-size: 0.7rem;
+  }
+}
+
+/* Optimize browser rendering performance */
+.modal-overlay,
+.modal-card,
+.option-card,
+.url-input-container {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Disable body scroll while modal is active */
+body.modal-open {
+  overflow: hidden;
+}
+

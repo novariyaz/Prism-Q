@@ -14,6 +14,8 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- OGL WebGL Library for the interactive shader Orb -->
   <script src="https://unpkg.com/ogl@0.0.32/dist/ogl.umd.js"></script>
+  <!-- PDF.js library for client-side PDF text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
 <body>
   <!-- Splash Screen -->
@@ -170,7 +172,20 @@
               </div>
               <textarea id="content-input" placeholder="Paste your content here..." rows="10"></textarea>
             </div>
-            <div class="editor-min-chars-note">Min. 50 characters</div>
+            <!-- Editor Toolbar with attachment badge and trigger button -->
+            <div class="editor-toolbar">
+              <div class="toolbar-left">
+                <button type="button" class="btn-icon-sm" id="btn-attachment-trigger" title="Attach media/file (+)">
+                  <i data-lucide="plus-circle"></i>
+                </button>
+                <div id="attachment-status-container" class="attachment-status-container">
+                  <span class="attachment-status-text" id="attachment-status-text">No files attached</span>
+                </div>
+              </div>
+              <div class="toolbar-right">
+                <div class="editor-min-chars-note">Min. 50 characters</div>
+              </div>
+            </div>
           </div>
 
           <div class="card-footer">
@@ -704,6 +719,66 @@
 
       </section>
     </main>
+  </div>
+
+  <!-- Media Attachment Modal -->
+  <div id="attachment-modal" class="modal-overlay hidden">
+    <div class="modal-card glass">
+      <div class="modal-header">
+        <h3><i data-lucide="plus-circle" class="icon-accent"></i> Add Media Attachment</h3>
+        <button id="btn-modal-close" class="btn-icon" style="background: transparent; border: none; color: var(--color-text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtext">Add screenshot images, documents, or URLs to extract draft text for multi-agent auditing.</p>
+        
+        <div class="attachment-options-grid">
+          <!-- Option 1: Image -->
+          <div class="option-card glass" id="option-upload-image">
+            <div class="option-icon-wrapper purple-glow">
+              <i data-lucide="image"></i>
+            </div>
+            <h4>Screenshot / Image</h4>
+            <p>Upload a PNG/JPG. Gemini extracts the text automatically.</p>
+            <input type="file" id="file-input-image" accept="image/*" style="display: none;" />
+          </div>
+
+          <!-- Option 2: Document -->
+          <div class="option-card glass" id="option-upload-doc">
+            <div class="option-icon-wrapper cyan-glow">
+              <i data-lucide="file-text"></i>
+            </div>
+            <h4>PDF / Text Document</h4>
+            <p>Select a PDF, TXT, or Markdown file to import the text.</p>
+            <input type="file" id="file-input-doc" accept=".pdf,.txt,.md" style="display: none;" />
+          </div>
+
+          <!-- Option 3: URL -->
+          <div class="option-card glass" id="option-input-url">
+            <div class="option-icon-wrapper emerald-glow">
+              <i data-lucide="link"></i>
+            </div>
+            <h4>Import Web URL</h4>
+            <p>Extract visible text content from any website URL.</p>
+          </div>
+        </div>
+
+        <!-- URL Input Drawer -->
+        <div class="url-input-container glass hidden" id="url-input-container">
+          <div class="input-group-inline glass" style="margin-bottom: 0; display: flex; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px;">
+            <i data-lucide="link" class="icon-muted" style="margin-left: 12px; width: 16px; height: 16px; color: var(--color-text-muted);"></i>
+            <input type="url" id="attachment-url-field" placeholder="https://example.com/article" style="background: transparent; border: none; color: #fff; padding: 10px; flex-grow: 1; outline: none; font-size: 0.82rem;" />
+            <button id="btn-import-url" class="btn btn-primary" style="margin: 4px; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;">Import</button>
+          </div>
+          <div class="url-hint">Uses a public CORS proxy. If blocked, you can manually copy/paste.</div>
+        </div>
+
+        <!-- Extraction Loader / State indicator inside modal -->
+        <div class="extraction-loader-panel hidden" id="extraction-loader-panel">
+          <div class="spinner-pulse"></div>
+          <div class="loader-message" id="loader-message">Extracting content from file...</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Notification System -->

@@ -17,6 +17,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const elToggleDemoContent = document.getElementById('toggle-demo-content');
   const elEditorGutter = document.getElementById('editor-gutter');
 
+  // --- Media Attachment UI Elements ---
+  const elBtnAttachmentTrigger = document.getElementById('btn-attachment-trigger');
+  const elAttachmentModal = document.getElementById('attachment-modal');
+  const elBtnModalClose = document.getElementById('btn-modal-close');
+  const elOptionUploadImage = document.getElementById('option-upload-image');
+  const elFileInputImage = document.getElementById('file-input-image');
+  const elOptionUploadDoc = document.getElementById('option-upload-doc');
+  const elFileInputDoc = document.getElementById('file-input-doc');
+  const elOptionInputUrl = document.getElementById('option-input-url');
+  const elUrlInputContainer = document.getElementById('url-input-container');
+  const elAttachmentUrlField = document.getElementById('attachment-url-field');
+  const elBtnImportUrl = document.getElementById('btn-import-url');
+  const elExtractionLoaderPanel = document.getElementById('extraction-loader-panel');
+  const elLoaderMessage = document.getElementById('loader-message');
+  const elAttachmentStatusContainer = document.getElementById('attachment-status-container');
+  const elAttachmentStatusText = document.getElementById('attachment-status-text');
+
   const elApiKey = document.getElementById('api-key');
   const elToggleApiKey = document.getElementById('toggle-api-key');
   const elEyeIcon = document.getElementById('eye-icon');
@@ -107,7 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
     apiKey: '',
     selectedModel: 'gemini-2.5-flash',
     history: [],
-    currentAuditId: null
+    currentAuditId: null,
+    attachedFile: null,
+    attachedType: null,
+    attachedName: ''
   };
 
   // --- Constants ---
@@ -462,7 +482,8 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
 
       function resize() {
         if (!container) return;
-        const dpr = window.devicePixelRatio || 1;
+        // Cap WebGL devicePixelRatio at 1.5 to optimize shader compilation and render speeds on mobile/low-end GPUs
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
         const width = container.clientWidth;
         const height = container.clientHeight;
         renderer.setSize(width * dpr, height * dpr);
@@ -620,6 +641,295 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
   function saveHistory() {
     localStorage.setItem('aura_audit_history', JSON.stringify(appState.history));
     renderHistoryList();
+  }
+
+  // --- Media Attachment Logic ---
+  function openAttachmentModal() {
+    if (elAttachmentModal) {
+      elAttachmentModal.classList.remove('hidden');
+      document.body.classList.add('modal-open');
+    }
+    if (elUrlInputContainer) elUrlInputContainer.classList.add('hidden');
+    if (elExtractionLoaderPanel) elExtractionLoaderPanel.classList.add('hidden');
+    if (elAttachmentUrlField) elAttachmentUrlField.value = '';
+  }
+
+  function closeAttachmentModal() {
+    if (elAttachmentModal) {
+      elAttachmentModal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    }
+  }
+
+  function showExtractionLoader(message) {
+    if (elLoaderMessage) elLoaderMessage.textContent = message;
+    if (elExtractionLoaderPanel) elExtractionLoaderPanel.classList.remove('hidden');
+  }
+
+  function hideExtractionLoader() {
+    if (elExtractionLoaderPanel) elExtractionLoaderPanel.classList.add('hidden');
+  }
+
+  function updateAttachmentBadge(name, type) {
+    if (!elAttachmentStatusContainer) return;
+    
+    if (!name) {
+      elAttachmentStatusContainer.innerHTML = '<span class="attachment-status-text" id="attachment-status-text">No files attached</span>';
+      appState.attachedFile = null;
+      appState.attachedType = null;
+      appState.attachedName = '';
+      return;
+    }
+
+    appState.attachedName = name;
+    appState.attachedType = type;
+
+    let icon = 'file-text';
+    if (type === 'image') icon = 'image';
+    if (type === 'url') icon = 'link';
+
+    elAttachmentStatusContainer.innerHTML = `
+      <div class="attachment-badge type-${type}" title="${escapeHtml(name)}">
+        <i data-lucide="${icon}" style="width: 12px; height: 12px;"></i>
+        <span>${escapeHtml(name)}</span>
+        <button type="button" class="btn-remove-attachment" id="btn-remove-attachment" title="Remove attachment">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+    `;
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+
+    const btnRemove = document.getElementById('btn-remove-attachment');
+    if (btnRemove) {
+      btnRemove.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateAttachmentBadge(null, null);
+        showToast('Attachment removed', 'info');
+      });
+    }
+  }
+
+  async function handleTextFile(file) {
+    showExtractionLoader('Reading text document...');
+    try {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        if (elContentInput) {
+          elContentInput.value = text;
+          elContentInput.dispatchEvent(new Event('input'));
+        }
+        
+        hideExtractionLoader();
+        closeAttachmentModal();
+        updateAttachmentBadge(file.name, 'doc');
+        showToast(`Imported ${file.name} successfully!`, 'success');
+      };
+      reader.onerror = function() {
+        throw new Error('Error reading text file.');
+      };
+      reader.readAsText(file);
+    } catch (error) {
+      console.error(error);
+      hideExtractionLoader();
+      showToast(`Document import failed: ${error.message}`, 'error');
+    }
+  }
+
+  async function handlePDFFile(file) {
+    showExtractionLoader('Loading PDF structure...');
+    try {
+      if (!window.pdfjsLib) {
+        throw new Error('PDF.js library is not loaded. Check your internet connection.');
+      }
+      
+      const arrayBuffer = await file.arrayBuffer();
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      
+      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        showExtractionLoader(`Extracting page ${i} of ${pdf.numPages}...`);
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n';
+      }
+
+      if (!fullText.trim()) {
+        throw new Error('No readable text found in PDF. It might be a scanned image PDF.');
+      }
+
+      if (elContentInput) {
+        elContentInput.value = fullText;
+        elContentInput.dispatchEvent(new Event('input'));
+      }
+
+      hideExtractionLoader();
+      closeAttachmentModal();
+      updateAttachmentBadge(file.name, 'doc');
+      showToast(`Imported ${pdf.numPages} pages from ${file.name}!`, 'success');
+    } catch (error) {
+      console.error(error);
+      hideExtractionLoader();
+      showToast(`PDF import failed: ${error.message}`, 'error');
+    }
+  }
+
+  async function handleUrlImport(url) {
+    if (!url) {
+      showToast('Please enter a valid URL.', 'error');
+      return;
+    }
+    
+    showExtractionLoader('Fetching website contents...');
+    try {
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch URL. HTTP status ${response.status}`);
+      }
+      
+      const html = await response.text();
+      
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      const tagsToRemove = ['script', 'style', 'nav', 'header', 'footer', 'noscript', 'iframe'];
+      tagsToRemove.forEach(tag => {
+        doc.querySelectorAll(tag).forEach(el => el.remove());
+      });
+      
+      let bodyText = '';
+      const paragraphs = doc.querySelectorAll('p, h1, h2, h3, article');
+      if (paragraphs.length > 0) {
+        bodyText = Array.from(paragraphs)
+          .map(p => p.textContent.trim())
+          .filter(txt => txt.length > 20)
+          .join('\n\n');
+      } else {
+        bodyText = doc.body.textContent;
+      }
+      
+      bodyText = bodyText.replace(/\s+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
+      
+      if (!bodyText || bodyText.length < 50) {
+        throw new Error('Extracted text is too short or empty. Website might block scrapers.');
+      }
+      
+      if (bodyText.length > 15000) {
+        bodyText = bodyText.substring(0, 15000) + '\n\n[Content truncated due to length limits]';
+      }
+      
+      if (elContentInput) {
+        elContentInput.value = bodyText;
+        elContentInput.dispatchEvent(new Event('input'));
+      }
+      
+      hideExtractionLoader();
+      closeAttachmentModal();
+      
+      let hostname = 'URL';
+      try {
+        hostname = new URL(url).hostname;
+      } catch (_) {}
+      
+      updateAttachmentBadge(hostname, 'url');
+      showToast('Website content imported successfully!', 'success');
+    } catch (error) {
+      console.error(error);
+      hideExtractionLoader();
+      showToast(`Web import failed (CORS restriction or dynamic page). Try copying the text manually.`, 'error');
+    }
+  }
+
+  async function handleImageOCR(file) {
+    if (!appState.apiKey) {
+      showToast('Gemini API Key is missing. Add your API Key in Settings (Gear Icon) to extract text.', 'error');
+      closeAttachmentModal();
+      return;
+    }
+    
+    showExtractionLoader('Transcribing text from screenshot...');
+    
+    try {
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+      
+      const cleanBase64 = base64Data.split(';base64,')[1];
+      
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${appState.selectedModel}:generateContent?key=${appState.apiKey}`;
+      const payload = {
+        contents: [
+          {
+            parts: [
+              { text: "OCR Task: Extract and transcribe all visible text, articles, or paragraphs from this image verbatim. Do not write any descriptions, introduction, or headers. Return ONLY the transcribed text content found in the image. If there is no text, return an empty string." },
+              {
+                inlineData: {
+                  mimeType: file.type,
+                  data: cleanBase64
+                }
+              }
+            ]
+          }
+        ]
+      };
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        let errMessage = 'OCR failed';
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMessage = `${errData.error.status} (${errData.error.code}): ${errData.error.message}`;
+          }
+        } catch (_) {
+          errMessage = `Server status code ${response.status}`;
+        }
+        throw new Error(errMessage);
+      }
+      
+      const data = await response.json();
+      if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+        throw new Error('No candidates returned from OCR engine.');
+      }
+      
+      const extractedText = data.candidates[0].content.parts[0].text.trim();
+      
+      if (!extractedText) {
+        throw new Error('No readable text found in image.');
+      }
+      
+      if (elContentInput) {
+        elContentInput.value = extractedText;
+        elContentInput.dispatchEvent(new Event('input'));
+      }
+      
+      hideExtractionLoader();
+      closeAttachmentModal();
+      updateAttachmentBadge(file.name, 'image');
+      showToast('Text successfully transcribed from image!', 'success');
+    } catch (error) {
+      console.error(error);
+      hideExtractionLoader();
+      showToast(`Image transcription failed: ${error.message}`, 'error');
+    }
   }
 
   // --- Toast System ---
@@ -1683,6 +1993,106 @@ ${r.suggestions.map(s => `- ${s}`).join('\n')}
         switchTab(btn.dataset.tab);
       });
     });
+
+    // --- Media Attachment Event Listeners ---
+    if (elBtnAttachmentTrigger) {
+      elBtnAttachmentTrigger.addEventListener('click', openAttachmentModal);
+    }
+    if (elBtnModalClose) {
+      elBtnModalClose.addEventListener('click', closeAttachmentModal);
+    }
+
+    if (elOptionUploadImage) {
+      elOptionUploadImage.addEventListener('click', () => {
+        if (elFileInputImage) elFileInputImage.click();
+      });
+    }
+    if (elFileInputImage) {
+      elFileInputImage.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('Image size exceeds 5MB limit.', 'error');
+          elFileInputImage.value = '';
+          return;
+        }
+
+        handleImageOCR(file);
+        elFileInputImage.value = '';
+      });
+    }
+
+    if (elOptionUploadDoc) {
+      elOptionUploadDoc.addEventListener('click', () => {
+        if (elFileInputDoc) elFileInputDoc.click();
+      });
+    }
+    if (elFileInputDoc) {
+      elFileInputDoc.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+          showToast('File size exceeds 10MB limit.', 'error');
+          elFileInputDoc.value = '';
+          return;
+        }
+
+        if (file.name.endsWith('.pdf')) {
+          handlePDFFile(file);
+        } else {
+          handleTextFile(file);
+        }
+        elFileInputDoc.value = '';
+      });
+    }
+
+    if (elOptionInputUrl) {
+      elOptionInputUrl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (elUrlInputContainer) {
+          elUrlInputContainer.classList.toggle('hidden');
+          if (!elUrlInputContainer.classList.contains('hidden') && elAttachmentUrlField) {
+            elAttachmentUrlField.focus();
+          }
+        }
+      });
+    }
+
+    if (elBtnImportUrl) {
+      elBtnImportUrl.addEventListener('click', () => {
+        if (elAttachmentUrlField) {
+          const url = elAttachmentUrlField.value.trim();
+          if (url) {
+            handleUrlImport(url);
+          } else {
+            showToast('Please enter a valid URL', 'error');
+          }
+        }
+      });
+    }
+    
+    if (elAttachmentUrlField) {
+      elAttachmentUrlField.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const url = elAttachmentUrlField.value.trim();
+          if (url) {
+            handleUrlImport(url);
+          } else {
+            showToast('Please enter a valid URL', 'error');
+          }
+        }
+      });
+    }
+
+    if (elAttachmentModal) {
+      elAttachmentModal.addEventListener('click', (e) => {
+        if (e.target === elAttachmentModal) {
+          closeAttachmentModal();
+        }
+      });
+    }
   }
 
   // Run initial configuration
