@@ -739,7 +739,6 @@
             </div>
             <h4>Screenshot / Image</h4>
             <p>Upload a PNG/JPG. Gemini extracts the text automatically.</p>
-            <input type="file" id="file-input-image" accept="image/*" style="display: none;" />
           </div>
 
           <!-- Option 2: Document -->
@@ -749,7 +748,6 @@
             </div>
             <h4>PDF / Text Document</h4>
             <p>Select a PDF, TXT, or Markdown file to import the text.</p>
-            <input type="file" id="file-input-doc" accept=".pdf,.txt,.md" style="display: none;" />
           </div>
 
           <!-- Option 3: URL -->
@@ -761,6 +759,10 @@
             <p>Extract visible text content from any website URL.</p>
           </div>
         </div>
+
+        <!-- Hidden input elements placed outside cards to prevent event bubbling feedback loops -->
+        <input type="file" id="file-input-image" accept="image/*" style="display: none;" />
+        <input type="file" id="file-input-doc" accept=".pdf,.txt,.md" style="display: none;" />
 
         <!-- URL Input Drawer -->
         <div class="url-input-container glass hidden" id="url-input-container">
