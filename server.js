@@ -18,7 +18,7 @@ app.use(express.static(__dirname));
 // Secure Proxy Endpoint for Gemini generateContent calls
 app.post('/api/audit', async (req, res) => {
   try {
-    const { model, contents, generationConfig } = req.body;
+    const { model, contents, generationConfig } = req.body || {};
     
     // Prioritize key from server environment variables; fall back to client header if present
     const apiKey = process.env.GEMINI_API_KEY || req.headers['x-api-key'];
