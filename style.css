@@ -2633,3 +2633,160 @@ body.modal-open {
   overflow: hidden;
 }
 
+/* ==========================================================================
+   PRISM Q - PROXY SETTINGS, DIFF VIEW & DRAG & DROP STYLES
+   ========================================================================== */
+
+/* Settings Drawer Checkbox */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.checkbox-wrapper:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+.checkbox-wrapper label {
+  cursor: pointer;
+}
+
+/* Editor Drag & Drop Zone */
+.editor-container {
+  position: relative;
+}
+
+.editor-drop-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(8, 8, 12, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px dashed rgba(138, 75, 243, 0.45);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  will-change: opacity, transform;
+}
+
+.editor-drop-zone.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+}
+
+.editor-drop-zone * {
+  pointer-events: none;
+}
+
+.drop-zone-content {
+  text-align: center;
+  padding: 24px;
+}
+
+.drop-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-accent);
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 10px rgba(138, 75, 243, 0.3));
+  animation: bounceSlow 2s infinite ease-in-out;
+}
+
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.drop-zone-content h3 {
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 8px 0;
+}
+
+.drop-zone-content p {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Diff View Highlights */
+.diff-added {
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-weight: 500;
+  display: inline;
+}
+
+.diff-removed {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+  text-decoration: line-through;
+  border-radius: 3px;
+  padding: 1px 3px;
+  display: inline;
+}
+
+/* Diff Panel Toggles */
+.glass-pill-container {
+  display: flex;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
+  padding: 3px;
+  width: fit-content;
+}
+
+.btn-diff-toggle {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-diff-toggle:hover {
+  color: white;
+}
+
+.btn-diff-toggle.active {
+  background: rgba(138, 75, 243, 0.2);
+  color: white;
+  box-shadow: inset 0 0 8px rgba(138, 75, 243, 0.15);
+  border: 1px solid rgba(138, 75, 243, 0.25);
+}
+

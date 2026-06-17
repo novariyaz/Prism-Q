@@ -104,6 +104,11 @@
             </select>
           </div>
 
+          <div class="checkbox-wrapper glass">
+            <input type="checkbox" id="checkbox-server-proxy" />
+            <label for="checkbox-server-proxy" title="Route requests via local server proxy to protect API key">Route via Proxy</label>
+          </div>
+
           <button id="btn-save-key" class="btn btn-primary">Save Settings</button>
         </div>
       </div>
@@ -171,6 +176,15 @@
                 <div>1</div>
               </div>
               <textarea id="content-input" placeholder="Paste your content here..." rows="10"></textarea>
+              
+              <!-- Drag and Drop Overlay -->
+              <div id="editor-drop-zone" class="editor-drop-zone hidden">
+                <div class="drop-zone-content">
+                  <i data-lucide="upload-cloud" class="icon-accent drop-icon"></i>
+                  <h3>Drop to Import Draft</h3>
+                  <p>Accepts Screenshot, PDF, or Document files</p>
+                </div>
+              </div>
             </div>
             <!-- Editor Toolbar with attachment badge and trigger button -->
             <div class="editor-toolbar">
@@ -624,15 +638,25 @@
                 <!-- Improved Content Tab -->
                 <div id="tab-improved" class="tab-panel">
                   <div class="improved-actions">
-                    <p class="text-muted">Gemini rewrote this draft utilizing audit suggestions to remove slop, clarify arguments, and improve readability while preserving original meaning.</p>
-                    <button id="btn-copy-improved" class="btn btn-secondary btn-sm btn-icon-text">
-                      <i data-lucide="copy"></i>
-                      <span>Copy Improved Draft</span>
-                    </button>
+                    <p class="text-muted" style="margin-bottom: 14px;">Gemini rewrote this draft utilizing audit suggestions to remove slop, clarify arguments, and improve readability while preserving original meaning.</p>
+                    <div class="improved-tabs-and-actions" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;">
+                      <!-- Diff Toggles -->
+                      <div class="diff-view-toggles glass-pill-container">
+                        <button type="button" class="btn-diff-toggle active" id="btn-view-raw">Polished Draft</button>
+                        <button type="button" class="btn-diff-toggle" id="btn-view-diff">Show Changes</button>
+                      </div>
+                      <button id="btn-copy-improved" class="btn btn-secondary btn-sm btn-icon-text" style="margin: 0;">
+                        <i data-lucide="copy"></i>
+                        <span>Copy Improved Draft</span>
+                      </button>
+                    </div>
                   </div>
                   <div class="improved-draft-container glass">
                     <div id="improved-content-display" class="improved-content-display">
                       <!-- Improved version text injected here -->
+                    </div>
+                    <div id="improved-content-diff-display" class="improved-content-display hidden">
+                      <!-- Colored HTML diff injected here -->
                     </div>
                   </div>
                   <div class="changes-list-container">

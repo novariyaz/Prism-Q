@@ -109,6 +109,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const elImprovedChangesList = document.getElementById('improved-changes-list');
   const elBtnCopyImproved = document.getElementById('btn-copy-improved');
   
+  // New components
+  const elCheckboxServerProxy = document.getElementById('checkbox-server-proxy');
+  const elEditorContainer = document.querySelector('.editor-container');
+  const elEditorDropZone = document.getElementById('editor-drop-zone');
+  const elBtnViewRaw = document.getElementById('btn-view-raw');
+  const elBtnViewDiff = document.getElementById('btn-view-diff');
+  const elImprovedContentDiffDisplay = document.getElementById('improved-content-diff-display');
+  
   // Debug explorer fields
   const elDebugReadability = document.getElementById('debug-readability');
   const elDebugSpecificity = document.getElementById('debug-specificity');
@@ -123,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let appState = {
     apiKey: '',
     selectedModel: 'gemini-2.5-flash',
+    useServerProxy: false,
     history: [],
     currentAuditId: null,
     attachedFile: null,
@@ -605,22 +614,29 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
   function loadSettings() {
     appState.apiKey = localStorage.getItem('aura_audit_key') || '';
     appState.selectedModel = localStorage.getItem('aura_audit_model') || 'gemini-2.5-flash';
+    appState.useServerProxy = localStorage.getItem('aura_audit_use_proxy') === 'true';
     
     if (appState.apiKey) {
       elApiKey.value = appState.apiKey;
     }
     elModelSelect.value = appState.selectedModel;
+    if (elCheckboxServerProxy) {
+      elCheckboxServerProxy.checked = appState.useServerProxy;
+    }
   }
 
   function saveSettings() {
     const key = elApiKey.value.trim();
     const model = elModelSelect.value;
+    const useProxy = elCheckboxServerProxy ? elCheckboxServerProxy.checked : false;
     
     appState.apiKey = key;
     appState.selectedModel = model;
+    appState.useServerProxy = useProxy;
     
     localStorage.setItem('aura_audit_key', key);
     localStorage.setItem('aura_audit_model', model);
+    localStorage.setItem('aura_audit_use_proxy', useProxy);
     
     showToast('Settings saved successfully', 'success');
   }
@@ -849,7 +865,7 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
   }
 
   async function handleImageOCR(file) {
-    if (!appState.apiKey) {
+    if (!appState.apiKey && !appState.useServerProxy) {
       showToast('Gemini API Key is missing. Add your API Key in Settings (Gear Icon) to extract text.', 'error');
       closeAttachmentModal();
       return;
@@ -867,7 +883,8 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
       
       const cleanBase64 = base64Data.split(';base64,')[1];
       
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${appState.selectedModel}:generateContent?key=${appState.apiKey}`;
+      let url, bodyPayload, headers = { 'Content-Type': 'application/json' };
+      
       const payload = {
         contents: [
           {
@@ -884,12 +901,24 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
         ]
       };
       
+      if (appState.useServerProxy) {
+        url = '/api/audit';
+        bodyPayload = {
+          model: appState.selectedModel,
+          contents: payload.contents
+        };
+        if (appState.apiKey) {
+          headers['x-api-key'] = appState.apiKey;
+        }
+      } else {
+        url = `https://generativelanguage.googleapis.com/v1beta/models/${appState.selectedModel}:generateContent?key=${appState.apiKey}`;
+        bodyPayload = payload;
+      }
+      
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        headers: headers,
+        body: JSON.stringify(bodyPayload)
       });
       
       if (!response.ok) {
@@ -1194,6 +1223,86 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
     }
   }
 
+  // --- LCS Word-Level Diff Generator ---
+  function generateDiffHTML(originalText, improvedText) {
+    const tokenize = (str) => {
+      if (!str) return [];
+      return str.match(/\s+|[a-zA-Z0-9]+|[^\s\w]/g) || [];
+    };
+
+    const originalTokens = tokenize(originalText);
+    const improvedTokens = tokenize(improvedText);
+
+    const n = originalTokens.length;
+    const m = improvedTokens.length;
+
+    const dp = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
+
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        if (originalTokens[i - 1] === improvedTokens[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+
+    let i = n;
+    let j = m;
+    const diff = [];
+
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && originalTokens[i - 1] === improvedTokens[j - 1]) {
+        diff.unshift({ type: 'equal', text: originalTokens[i - 1] });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        diff.unshift({ type: 'added', text: improvedTokens[j - 1] });
+        j--;
+      } else if (i > 0 && (j === 0 || dp[i - 1][j] >= dp[i][j - 1])) {
+        diff.unshift({ type: 'removed', text: originalTokens[i - 1] });
+        i--;
+      }
+    }
+
+    const escapeHtml = (text) => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    let html = '';
+    let currentType = null;
+    let currentText = '';
+
+    const flush = () => {
+      if (!currentText) return;
+      if (currentType === 'equal') {
+        html += escapeHtml(currentText);
+      } else if (currentType === 'added') {
+        html += `<ins class="diff-added">${escapeHtml(currentText)}</ins>`;
+      } else if (currentType === 'removed') {
+        html += `<del class="diff-removed">${escapeHtml(currentText)}</del>`;
+      }
+      currentText = '';
+    };
+
+    for (const part of diff) {
+      if (part.type !== currentType) {
+        flush();
+        currentType = part.type;
+      }
+      currentText += part.text;
+    }
+    flush();
+
+    return html.replace(/\n/g, '<br>');
+  }
+
   // --- Render Report Dashboard ---
   function renderReportDashboard(report, timestamp, improved = null) {
     if (elWelcomePanel) elWelcomePanel.classList.add('hidden');
@@ -1240,6 +1349,14 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
     if (improved) {
       elTabImprovedBtn.classList.remove('hidden');
       elImprovedContentDisplay.textContent = improved.improvedContent;
+      
+      // Calculate and inject the diff
+      const currentAudit = appState.history.find(x => x.id === appState.currentAuditId);
+      const originalText = currentAudit ? currentAudit.text : cleanText;
+      if (originalText && elImprovedContentDiffDisplay) {
+        elImprovedContentDiffDisplay.innerHTML = generateDiffHTML(originalText, improved.improvedContent);
+      }
+      
       populateList(elImprovedChangesList, improved.changesMade);
     } else {
       elTabImprovedBtn.classList.add('hidden');
@@ -1248,6 +1365,14 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
       if (document.querySelector('.tab-btn[data-tab="tab-improved"]').classList.contains('active')) {
         switchTab('tab-summary');
       }
+    }
+
+    // Reset view toggle buttons to raw view
+    if (elBtnViewRaw && elBtnViewDiff) {
+      elBtnViewRaw.classList.add('active');
+      elBtnViewDiff.classList.remove('active');
+      elImprovedContentDisplay.classList.remove('hidden');
+      elImprovedContentDiffDisplay.classList.add('hidden');
     }
   }
 
@@ -1335,7 +1460,7 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
 
   // --- API request wrapper to Gemini API ---
   async function callGeminiAPI(promptText) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${appState.selectedModel}:generateContent?key=${appState.apiKey}`;
+    let url, bodyPayload, headers = { 'Content-Type': 'application/json' };
     
     const payload = {
       contents: [
@@ -1348,12 +1473,25 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
       }
     };
 
+    if (appState.useServerProxy) {
+      url = '/api/audit';
+      bodyPayload = {
+        model: appState.selectedModel,
+        contents: payload.contents,
+        generationConfig: payload.generationConfig
+      };
+      if (appState.apiKey) {
+        headers['x-api-key'] = appState.apiKey;
+      }
+    } else {
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${appState.selectedModel}:generateContent?key=${appState.apiKey}`;
+      bodyPayload = payload;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
+      headers: headers,
+      body: JSON.stringify(bodyPayload)
     });
 
     if (!response.ok) {
@@ -1414,7 +1552,7 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
       return;
     }
     
-    if (!appState.apiKey) {
+    if (!appState.apiKey && !appState.useServerProxy) {
       showToast('API Key is missing. Please enter and save your Gemini API key.', 'error');
       return;
     }
@@ -1706,7 +1844,7 @@ Do not include any Markdown wrappers. Return only the raw JSON.`,
     const currentAudit = appState.history.find(x => x.id === appState.currentAuditId);
     if (!currentAudit) return;
 
-    if (!appState.apiKey) {
+    if (!appState.apiKey && !appState.useServerProxy) {
       showToast('API Key is missing. Please save your API key.', 'error');
       return;
     }
@@ -2090,6 +2228,76 @@ ${r.suggestions.map(s => `- ${s}`).join('\n')}
       elAttachmentModal.addEventListener('click', (e) => {
         if (e.target === elAttachmentModal) {
           closeAttachmentModal();
+        }
+      });
+    }
+
+    // --- Diff View Toggles ---
+    if (elBtnViewRaw && elBtnViewDiff) {
+      elBtnViewRaw.addEventListener('click', () => {
+        elBtnViewRaw.classList.add('active');
+        elBtnViewDiff.classList.remove('active');
+        elImprovedContentDisplay.classList.remove('hidden');
+        elImprovedContentDiffDisplay.classList.add('hidden');
+      });
+
+      elBtnViewDiff.addEventListener('click', () => {
+        elBtnViewDiff.classList.add('active');
+        elBtnViewRaw.classList.remove('active');
+        elImprovedContentDisplay.classList.add('hidden');
+        elImprovedContentDiffDisplay.classList.remove('hidden');
+      });
+    }
+
+    // --- Drag and Drop Editor Uploads ---
+    if (elEditorContainer && elEditorDropZone) {
+      elEditorContainer.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        elEditorDropZone.classList.remove('hidden');
+      });
+
+      elEditorContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        elEditorDropZone.classList.remove('hidden');
+      });
+
+      elEditorDropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        elEditorDropZone.classList.add('hidden');
+      });
+
+      elEditorDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        elEditorDropZone.classList.add('hidden');
+
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          const file = files[0];
+          if (file.type.startsWith('image/')) {
+            if (file.size > 5 * 1024 * 1024) {
+              showToast('Image size exceeds 5MB limit.', 'error');
+              return;
+            }
+            handleImageOCR(file);
+          } else if (file.name.endsWith('.pdf')) {
+            if (file.size > 10 * 1024 * 1024) {
+              showToast('File size exceeds 10MB limit.', 'error');
+              return;
+            }
+            handlePDFFile(file);
+          } else if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+            if (file.size > 10 * 1024 * 1024) {
+              showToast('File size exceeds 10MB limit.', 'error');
+              return;
+            }
+            handleTextFile(file);
+          } else {
+            showToast('Unsupported file format. Please drop an Image, PDF, TXT, or MD file.', 'error');
+          }
         }
       });
     }
